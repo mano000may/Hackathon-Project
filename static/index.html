@@ -1,0 +1,828 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#000000">
+<title>AI Stock Predictor</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230052ff'/%3E%3Cpath d='M5 22l7-8 5 5 10-12' fill='none' stroke='%23ffffff' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<script>
+  // Set before first paint so nothing flashes: sidebar width, motion preference, and which stage (preloader / landing / app) shows.
+  (function () {
+    var d = document.documentElement, saved = {};
+    try { saved.side = localStorage.getItem("side"); saved.motion = localStorage.getItem("motion"); saved.booted = sessionStorage.getItem("booted"); } catch (e) {}
+    d.dataset.side = saved.side || (innerWidth < 1100 ? "collapsed" : "expanded");
+    d.dataset.motion = saved.motion || (matchMedia("(prefers-reduced-motion: reduce)").matches ? "reduced" : "full");
+    var q = new URLSearchParams(location.search), v = q.get("view");
+    d.dataset.stage = (v && v !== "home") || q.get("s") ? "app" : (saved.booted === "1" ? "landing" : "boot");
+  })();
+</script>
+<link rel="preload" href="/static/fonts/inter.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/static/fonts/jetbrains-mono.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/static/app.css">
+<link rel="stylesheet" href="/static/landing.css">
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <symbol id="i-markets" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-macro" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+  <symbol id="i-model" viewBox="0 0 24 24"><path d="M9 3h6M10 3v6L4.5 19a1.5 1.5 0 0 0 1.3 2.2h12.4a1.5 1.5 0 0 0 1.3-2.2L14 9V3M7.5 15h9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.5-4M4 4v4h4M4 13a8 8 0 0 0 14.5 4M20 20v-4h-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-chevron" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-pause" viewBox="0 0 24 24"><path d="M8 5v14M16 5v14" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 4.5v15l12-7.5z" fill="currentColor"/></symbol>
+  <symbol id="i-home" viewBox="0 0 24 24"><path d="M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-motion" viewBox="0 0 24 24"><path d="M13 2L4 14h7l-1 8 9-12h-7z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2"/><path d="M16.5 16.5L21 21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+</svg>
+<a class="skip" href="#main">Skip to Main Content</a>
+
+<div id="preloader" role="dialog" aria-modal="true" aria-label="Loading AI Stock Predictor">
+  <div class="p-card">
+    <svg class="p-mark" width="68" height="68" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#0052ff"/><path d="M6 22l6-7 5 5 9-11" fill="none" stroke="#ffffff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <p class="p-title" translate="no">AI Stock Predictor</p>
+    <p class="p-tag">Ranking the S&amp;P&nbsp;500, privately on your device.</p>
+    <div class="p-track" id="pbarWrap" role="progressbar" aria-label="Loading progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div class="p-bar" id="pbar"></div></div>
+    <div class="p-meta"><span id="pmsg" role="status" aria-live="polite">Starting…</span><span id="ppct">0%</span></div>
+    <div class="p-enter" id="enterWrap" hidden><button class="cta lg" id="enterBtn" type="button">Enter App <span class="arrow" aria-hidden="true">→</span></button></div>
+    <div id="perr" hidden><p class="p-err" id="perrMsg" role="alert"></p><button class="ghost" id="pretry" type="button" style="margin-top:12px">Try Again</button></div>
+  </div>
+</div>
+
+<div id="landing" class="landing">
+  <a class="skip" href="#landMain">Skip to Main Content</a>
+  <header class="l-nav"><div class="l-wrap">
+    <a class="l-brand" href="./" data-view="home" translate="no"><svg width="30" height="30" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#0052ff"/><path d="M6 22l6-7 5 5 9-11" fill="none" stroke="#ffffff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>AI Stock Predictor</a>
+    <nav class="l-links" aria-label="Sections"><a href="#features">Features</a><a href="#how">How It Works</a><a href="#models">Models</a><a href="#stack">Tech Stack</a></nav>
+    <button class="motion-btn" id="motionBtn1" type="button" aria-pressed="true"><svg width="16" height="16" aria-hidden="true"><use href="#i-motion"/></svg><span>Animations: On</span></button>
+    <a class="cta" href="?view=markets" data-view="markets">Open Dashboard</a>
+  </div></header>
+
+  <main id="landMain" tabindex="-1">
+    <section class="band dark" aria-labelledby="landTitle"><div class="l-wrap"><div class="hero">
+      <div>
+        <span class="eyebrow reveal">Free · Local · Open Data</span>
+        <h1 class="display reveal" id="landTitle" tabindex="-1" style="--d:.08s">Rank the whole market. <span class="soft-line">Know how far to trust it.</span></h1>
+        <p class="sub reveal" style="--d:.16s">AI Stock Predictor scores every S&amp;P&nbsp;500 company, then grades its own predictions against a simple baseline, so you see the signal and the honesty together. It runs entirely on your computer.</p>
+        <div class="cta-row reveal" style="--d:.24s"><a class="cta lg" href="?view=markets" data-view="markets">Open Dashboard</a><a class="ghost lg" href="#how">See How It Works</a></div>
+        <ul class="hero-stats reveal" id="heroStats" style="--d:.32s"></ul>
+      </div>
+      <div class="stackcards reveal" style="--d:.2s">
+        <div class="pcard main">
+          <h2><span>Live From Your Data</span><span id="pvAsOf" class="num"></span></h2>
+          <div id="pvRows"></div>
+        </div>
+        <div class="pcard second">
+          <p class="verdict-chip" role="status"><span class="dot" id="pvDot" aria-hidden="true"></span><span id="pvTxt"></span></p>
+          <p id="pvRisk"></p>
+        </div>
+      </div>
+    </div></div></section>
+
+    <section class="band light" id="features" tabindex="-1" aria-labelledby="h-features"><div class="l-wrap">
+      <span class="eyebrow reveal">Features</span>
+      <h2 class="sec-title reveal" id="h-features">Useful, and honest about its limits</h2>
+      <div class="carousel reveal" id="carousel" role="region" aria-roledescription="carousel" aria-label="Product features">
+        <div class="c-viewport"><div class="c-track" id="cTrack" aria-live="off"></div></div>
+        <div class="c-ctrl">
+          <button class="round" id="cPrev" type="button" aria-label="Previous Slide"><svg width="18" height="18" aria-hidden="true"><use href="#i-chevron"/></svg></button>
+          <div class="grow"><div class="dots" id="cDots"></div></div>
+          <button class="round" id="cPlay" type="button" aria-label="Pause Slideshow"><svg width="16" height="16" aria-hidden="true"><use id="cPlayIcon" href="#i-pause"/></svg></button>
+          <button class="round" id="cNext" type="button" aria-label="Next Slide"><svg width="18" height="18" aria-hidden="true" style="transform:rotate(180deg)"><use href="#i-chevron"/></svg></button>
+        </div>
+        <div class="c-prog" id="cProg"></div>
+      </div>
+    </div></section>
+
+    <section class="band soft" id="how" tabindex="-1" aria-labelledby="h-how"><div class="l-wrap">
+      <span class="eyebrow reveal">How It Works</span>
+      <h2 class="sec-title reveal" id="h-how">From raw prices to a ranked signal</h2>
+      <p class="sub reveal">A Python pipeline runs on your machine. Select any step to see what happens behind the scenes.</p>
+      <div class="flow reveal" id="flow" role="group" aria-label="Pipeline steps"></div>
+      <div class="flow-detail reveal" id="flowDetail" aria-live="polite"></div>
+    </div></section>
+
+    <section class="band light" id="models" tabindex="-1" aria-labelledby="h-models"><div class="l-wrap">
+      <span class="eyebrow reveal">The Models</span>
+      <h2 class="sec-title reveal" id="h-models">Model status, live from the server</h2>
+      <div class="cards4 reveal" id="statusCards"></div>
+      <div class="explain reveal">
+        <div><b>1 · Data in</b><span>Ten years of prices and four macro series become 20 numbers per stock per day: momentum, trend, volatility, strength versus peers, and the rate backdrop.</span></div>
+        <div><b>2 · Model runs</b><span>Two simple models, trained on every stock together: one estimates the return over the next five trading days, the other forecasts how large each stock’s moves will be. Simple on purpose, because simple models overfit less.</span></div>
+        <div><b>3 · Signal out</b><span>Estimates become a ranking and a risk rating. The report card tests both on two unseen years and says plainly where there is skill (risk) and where there isn’t (returns).</span></div>
+      </div>
+    </div></section>
+
+    <section class="band dark" id="stack" tabindex="-1" aria-labelledby="h-stack"><div class="l-wrap">
+      <span class="eyebrow reveal">Tech Stack</span>
+      <h2 class="sec-title reveal" id="h-stack">Open tools, nothing paid</h2>
+      <p class="sub reveal">Everything below is free and open source, and every step runs on your own computer.</p>
+      <div class="stack-grid reveal" id="stackGrid" aria-label="Technologies used"></div>
+    </div></section>
+
+    <section class="band dark final" aria-labelledby="h-final"><div class="l-wrap reveal">
+      <h2 class="display" id="h-final">Ready to look at the market?</h2>
+      <p class="sub">The dashboard has the full watchlist, charts, macro readings and the model’s report card.</p>
+      <div class="cta-row"><a class="cta lg" href="?view=markets" data-view="markets">Open Dashboard</a></div>
+    </div></section>
+  </main>
+
+  <footer class="l-foot"><div class="l-wrap">
+    <p><strong>Experimental model. Not financial advice.</strong> Predictions are statistical estimates that rarely beat a coin flip, and this app does not place trades. Prices are daily closes cached from Yahoo Finance; macro data is from FRED; company logos come from public favicons. Do not make investment decisions based on this tool.</p>
+  </div></footer>
+</div>
+
+<div class="app" id="app">
+  <aside class="side" id="side" aria-label="Dashboard">
+    <div class="side-head">
+      <a class="brand" href="./" data-view="home" translate="no">
+        <svg class="logo" width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#0052ff"/><path d="M6 22l6-7 5 5 9-11" fill="none" stroke="#ffffff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span class="lbl">AI Stock Predictor</span>
+      </a>
+      <button class="icon-btn" id="sideToggle" type="button" aria-controls="side" aria-expanded="true" aria-label="Collapse Sidebar"><svg width="18" height="18" aria-hidden="true"><use href="#i-chevron"/></svg></button>
+    </div>
+    <p class="side-sec">Dashboard</p>
+    <nav aria-label="Primary">
+      <ul>
+        <li><a class="item" href="./" data-view="home" title="Home"><svg width="20" height="20" aria-hidden="true"><use href="#i-home"/></svg><span class="lbl">Home</span></a></li>
+        <li><a class="item" href="?view=markets" data-view="markets" title="Markets"><svg width="20" height="20" aria-hidden="true"><use href="#i-markets"/></svg><span class="lbl">Markets</span></a></li>
+        <li><a class="item" href="?view=macro" data-view="macro" title="Macro"><svg width="20" height="20" aria-hidden="true"><use href="#i-macro"/></svg><span class="lbl">Macro</span></a></li>
+        <li><a class="item" href="?view=model" data-view="model" title="Model Report"><svg width="20" height="20" aria-hidden="true"><use href="#i-model"/></svg><span class="lbl">Model Report</span></a></li>
+      </ul>
+    </nav>
+    <div class="side-foot">
+      <button class="item" id="motionBtn2" type="button" aria-pressed="true" title="Animations"><svg width="20" height="20" aria-hidden="true"><use href="#i-motion"/></svg><span class="lbl">Animations: On</span></button>
+      <p id="jobMsg" role="status" aria-live="polite"></p>
+      <button class="item primary" id="updateBtn" type="button" title="Update Data &amp; Retrain"><svg width="20" height="20" aria-hidden="true" id="updIcon"><use href="#i-refresh"/></svg><span class="spin" id="updSpin" aria-hidden="true" hidden></span><span class="lbl" id="updLbl">Update Data &amp; Retrain</span></button>
+    </div>
+  </aside>
+
+  <div class="content">
+    <div class="bar">
+      <button class="icon-btn tape-btn" id="tapeToggle" type="button" aria-pressed="false" aria-label="Pause Ticker"><svg width="14" height="14" aria-hidden="true"><use id="tapeIcon" href="#i-pause"/></svg></button>
+      <div class="tape" id="tape" role="region" aria-label="Market ticker"><div class="track" id="track"></div></div>
+      <p class="asof num" id="asof"></p>
+    </div>
+
+    <main id="main" tabindex="-1">
+      <div id="alert" class="notice" role="alert" hidden></div>
+
+      <!-- Markets -->
+      <section id="viewMarkets" class="stack" aria-labelledby="t-markets">
+        <div class="page-head">
+          <div><h1 id="t-markets" tabindex="-1">Markets</h1><p class="lead" id="lead">S&amp;P&nbsp;500 stocks by market cap. Loading…</p></div>
+        </div>
+        <div class="tiles" id="stats" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr))"></div>
+        <form class="filters" id="filters" role="search" autocomplete="off">
+          <div class="field grow">
+            <label class="sr" for="q">Search by symbol or company</label>
+            <svg width="16" height="16" aria-hidden="true"><use href="#i-search"/></svg>
+            <input id="q" name="q" type="search" autocomplete="off" spellcheck="false" inputmode="search" enterkeyhint="search" placeholder="Search e.g. AAPL or Apple…">
+          </div>
+          <div class="field"><label class="sr" for="sector">Filter by sector</label><select id="sector" name="sector"><option value="">All Sectors</option></select></div>
+          <div class="field"><label class="sr" for="sort">Sort by</label>
+            <select id="sort" name="sort">
+              <option value="cap">Market Cap</option><option value="pred">Predicted Return</option><option value="day">Daily Change</option><option value="risk">Risk (Wildest First)</option><option value="price">Price</option><option value="az">Symbol</option>
+            </select></div>
+          <button class="btn" type="button" id="dirBtn" aria-label="Reverse sort order">↓</button>
+          <div class="seg" role="group" aria-label="Layout"><button type="button" id="lyTable" aria-pressed="true">Table</button><button type="button" id="lyCards" aria-pressed="false">Cards</button></div>
+          <p class="count num" id="count" role="status" aria-live="polite"></p>
+        </form>
+        <div class="empty" id="empty" hidden><p id="emptyMsg"></p><button class="btn" id="clearBtn" type="button">Clear Filters</button></div>
+        <table class="watch" id="table">
+          <caption class="sr">Stocks with price, daily change, 40-day trend, market cap and predicted return</caption>
+          <thead><tr id="thead"></tr></thead>
+          <tbody id="tbody"></tbody>
+        </table>
+        <ul class="grid" id="cards" aria-label="Stocks" hidden></ul>
+        <div class="more" id="more" aria-hidden="true"></div>
+      </section>
+
+      <!-- Stock detail -->
+      <section id="viewDetail" class="stack" aria-labelledby="dTitle" hidden>
+        <div>
+          <nav aria-label="Breadcrumb"><a class="crumb" id="back" href="./" data-back><span aria-hidden="true">←</span> All Stocks</a></nav>
+          <div class="d-head">
+            <div class="who" style="gap:14px"><span id="dLogo"></span><div><h1 id="dTitle" tabindex="-1" translate="no"></h1><p class="d-sub" id="dSub"></p></div></div>
+            <div class="d-price"><p class="big" id="dPrice"></p><p class="num" id="dDay"></p></div>
+          </div>
+        </div>
+        <div class="term">
+          <section aria-labelledby="h-chart">
+            <h2 class="sr" id="h-chart">Price Chart</h2>
+            <div class="chart-bar"><div class="seg" role="group" aria-label="Chart range" id="ranges"></div><p id="readout" aria-live="off">Hover or use the arrow keys on the chart for prices.</p></div>
+            <div class="chart-wrap"><canvas id="chart" tabindex="0" role="img" aria-label="Price chart"></canvas></div>
+            <p class="legend"><span><i style="border-color:var(--accent-text);border-top-style:dashed"></i>Predicted Price</span><span><i style="border-color:rgba(91,140,255,.5);border-top-style:dotted"></i>Typical Swing Range</span><span><i style="border-color:#f4b000"></i>20-Day Average</span><span><i style="border-color:#929aa5"></i>50-Day Average</span></p>
+            <details><summary>Show Recent Prices as a Table</summary>
+              <div class="tbl-wrap"><table class="mini"><caption class="sr">Most recent daily prices</caption>
+                <thead><tr><th scope="col">Date</th><th scope="col">Open</th><th scope="col">High</th><th scope="col">Low</th><th scope="col">Close</th><th scope="col">Volume</th></tr></thead>
+                <tbody id="tblBody"></tbody></table></div>
+            </details>
+          </section>
+          <div class="stack" style="margin-top:0">
+            <section class="panel" aria-labelledby="h-pred"><h2 id="h-pred">Prediction</h2><dl class="rows" id="predRows"></dl></section>
+            <section class="panel" aria-labelledby="h-stats"><h2 id="h-stats">Key Stats</h2><dl class="rows" id="statRows"></dl>
+              <div id="range52"></div></section>
+          </div>
+        </div>
+      </section>
+
+      <!-- Macro -->
+      <section id="viewMacro" class="stack" aria-labelledby="t-macro" hidden>
+        <div><h1 id="t-macro" tabindex="-1">Macro</h1><p class="lead">Interest rates and credit conditions from FRED. The model uses these as inputs, and they set the backdrop for every stock.</p></div>
+        <div id="macroEmpty" class="empty" hidden><p>No macro data yet. Select “Update Data &amp; Retrain” in the sidebar, with internet access, to download it.</p></div>
+        <ul class="tiles" id="macroTiles" style="grid-template-columns:repeat(auto-fit,minmax(300px,1fr))"></ul>
+      </section>
+
+      <!-- Model report -->
+      <section id="viewModel" class="stack" aria-labelledby="t-model" hidden>
+        <div><h1 id="t-model" tabindex="-1">Model Report</h1><p class="lead">How the prediction model performed on prices it never saw during training.</p></div>
+        <section class="panel" aria-labelledby="h-verdict"><h2 id="h-verdict">Latest Test</h2><div id="modelBody"><p class="muted">Loading…</p></div></section>
+        <section class="panel" aria-labelledby="h-risk"><h2 id="h-risk">Risk Forecast</h2><div id="riskBody"><p class="muted">Loading…</p></div></section>
+        <section class="panel" aria-labelledby="h-read"><h2 id="h-read">How to Read This</h2>
+          <ul class="bullets">
+            <li><b>Risk forecast</b> is a separate model. Its job is the size of a stock’s moves, not their direction. It is scored against “volatility stays as it was lately”.</li>
+            <li><b>Direction accuracy</b> is how often the predicted move had the right sign. Compare it with “always guess up”, the free baseline.</li>
+            <li><b>Rank skill (IC)</b> checks, week by week, whether stocks the model ranked higher really did better than stocks it ranked lower. Zero is pure chance.</li>
+            <li><b>Best fifth vs. worst fifth</b> is the average weekly gap between the stocks ranked highest and lowest. The t value says whether that gap is bigger than luck: above 2 is clear, near 0 is noise. Costs are not included.</li>
+          </ul></section>
+        <details id="dataq" class="panel"><summary id="dataqSummary">Data Quality</summary><ul id="dataqList"></ul></details>
+      </section>
+    </main>
+
+    <footer class="status" aria-label="Disclaimers">
+      <a class="chip" id="chip" href="?view=model" data-view="model"><span class="dot" id="chipDot" aria-hidden="true"></span><span id="chipTxt">Model Report</span></a>
+      <p><strong>Experimental model. Not financial advice.</strong> Predictions are statistical estimates that rarely beat a coin flip. Prices are daily closes cached from Yahoo Finance; macro data is from FRED. Do not trade on this.</p>
+      <p class="asof num" style="flex:none" id="asof2"></p>
+    </footer>
+  </div>
+</div>
+
+<script src="/static/landing.js"></script>
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const NB = " ";
+const lang = navigator.languages;
+const usd = new Intl.NumberFormat(lang, { style: "currency", currency: "USD" });
+const usdCompact = new Intl.NumberFormat(lang, { style: "currency", currency: "USD", notation: "compact", maximumFractionDigits: 2 });
+const dec2 = new Intl.NumberFormat(lang, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const dec3 = new Intl.NumberFormat(lang, { minimumFractionDigits: 3, maximumFractionDigits: 3 });
+const int = new Intl.NumberFormat(lang);
+const pct = new Intl.NumberFormat(lang, { style: "percent", minimumFractionDigits: 2, maximumFractionDigits: 2, signDisplay: "exceptZero" });
+const pct1 = new Intl.NumberFormat(lang, { style: "percent", minimumFractionDigits: 1, maximumFractionDigits: 1 });
+const signed2 = new Intl.NumberFormat(lang, { minimumFractionDigits: 2, maximumFractionDigits: 2, signDisplay: "exceptZero" });
+const dateMed = new Intl.DateTimeFormat(lang, { dateStyle: "medium", timeZone: "UTC" });
+const dayShort = new Intl.DateTimeFormat(lang, { month: "short", day: "numeric", timeZone: "UTC" });
+const monthShort = new Intl.DateTimeFormat(lang, { month: "short", year: "2-digit", timeZone: "UTC" });
+const utc = iso => new Date(iso + "T00:00:00Z");
+const RANGES = { "1M": 21, "3M": 63, "6M": 126, "1Y": 252, "2Y": 504, "5Y": 1260 };
+const VIEWS = ["home", "markets", "macro", "model"];
+const CHUNK = 60;
+
+const dayChg = r => r.spark[r.spark.length - 1] / r.spark[r.spark.length - 2] - 1;
+const SORTS = {  // val() returns null for "unknown", which always sorts last
+  cap: { dir: "desc", val: r => r.market_cap },
+  pred: { dir: "desc", val: r => r.pred_return },
+  day: { dir: "desc", val: dayChg },
+  price: { dir: "desc", val: r => r.price },
+  risk: { dir: "desc", val: r => r.vol },
+  az: { dir: "asc", val: r => r.symbol },
+};
+const MACRO_ABOUT = {
+  DGS10: "Yield on 10-year US government bonds. Rising yields can pressure stock valuations.",
+  T10Y2Y: "10-year minus 2-year yield. Below zero (an inverted curve) has often come before recessions.",
+  BAA10Y: "Extra yield investors demand for corporate bonds over Treasuries. Widening means more credit stress.",
+  DFF: "The overnight rate set by the Fed, which is the baseline cost of borrowing.",
+};
+
+const state = { view: "home", s: "", range: "6M", q: "", sector: "", sort: "cap", dir: "", layout: "table" };
+let rows = [], model = null, dataInfo = null, macro = null, loaded = false, poll = null, list = [], shown = 0;
+
+/* ---------- helpers ---------- */
+function h(tag, props, ...kids) {  // text only: company names can never inject markup
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(props || {})) {
+    if (v == null || v === false) continue;
+    if (k === "class") e.className = v;
+    else if (k === "text") e.textContent = v;
+    else if (k.startsWith("on")) e.addEventListener(k.slice(2), v);
+    else e.setAttribute(k, v === true ? "" : v);
+  }
+  e.append(...kids.flat().filter(x => x != null && x !== false));
+  return e;
+}
+function svgEl(tag, attrs, ...kids) {
+  const e = document.createElementNS("http://www.w3.org/2000/svg", tag);
+  for (const [k, v] of Object.entries(attrs || {})) e.setAttribute(k, v);
+  e.append(...kids);
+  return e;
+}
+function spark(vals, label, neutral = false, w = 120, ht = 36) {
+  const lo = Math.min(...vals), hi = Math.max(...vals), span = hi - lo || 1;
+  const line = vals.map((v, i) => `${i ? "L" : "M"}${(i / (vals.length - 1) * w).toFixed(1)} ${(ht - 2 - (v - lo) / span * (ht - 4)).toFixed(1)}`).join("");
+  const delta = vals[vals.length - 1] - vals[0];
+  return svgEl("svg", { viewBox: `0 0 ${w} ${ht}`, width: w, height: ht, preserveAspectRatio: "none", role: "img", "aria-label": label,
+    class: "spark " + (neutral || delta === 0 ? "flat" : delta > 0 ? "" : "down") },
+    svgEl("path", { class: "area", d: `${line}L${w} ${ht}L0 ${ht}Z` }), svgEl("path", { class: "line", d: line }));
+}
+async function api(path, opts) {
+  const r = await fetch(path, opts);
+  if (!r.ok) throw new Error((await r.json().catch(() => ({}))).detail || r.statusText);
+  return r.json();
+}
+const horizon = () => (model ? model.horizon : 5);
+const effDir = () => state.dir || SORTS[state.sort].dir;
+function logoEl(r, size) {  // the server always returns an image; the letter tile only covers a failed request
+  const b = h("span", { class: "badge" + (size > 30 ? " lg" : "") + (r.logo ? " has-logo" : ""), "aria-hidden": "true" });
+  const img = h("img", { src: `/logos/${encodeURIComponent(r.symbol)}`, alt: "", width: size - 6, height: size - 6, loading: "lazy", decoding: "async" });
+  img.addEventListener("error", () => { img.remove(); b.classList.remove("has-logo"); b.textContent = r.symbol[0]; });
+  b.append(img);
+  return b;
+}
+const tile = (k, v, hint) => h("div", { class: "tile" }, h("p", { class: "k", text: k }), h("p", { class: "v" }, v), hint && h("p", { class: "hint", text: hint }));
+
+/* ---------- URL state ---------- */
+function readURL() {
+  const p = new URLSearchParams(location.search);
+  state.view = VIEWS.includes(p.get("view")) ? p.get("view") : (p.get("s") ? "markets" : "home");  // old ?s=AAPL links still open the stock
+  state.s = p.get("s") || ""; state.range = RANGES[p.get("range")] ? p.get("range") : "6M";
+  state.q = p.get("q") || ""; state.sector = p.get("sector") || "";
+  state.sort = SORTS[p.get("sort")] ? p.get("sort") : "cap";
+  state.dir = ["asc", "desc"].includes(p.get("dir")) && p.get("dir") !== SORTS[state.sort].dir ? p.get("dir") : "";
+  state.layout = p.get("layout") === "cards" ? "cards" : "table";
+}
+function urlFor(withStock) {
+  const p = new URLSearchParams();
+  if (state.view !== "home") p.set("view", state.view);
+  if (state.view === "markets") {
+    if (state.q) p.set("q", state.q);
+    if (state.sector) p.set("sector", state.sector);
+    if (state.sort !== "cap") p.set("sort", state.sort);
+    if (state.dir) p.set("dir", state.dir);
+    if (state.layout === "cards") p.set("layout", "cards");
+    if (withStock && state.s) { p.set("s", state.s); if (state.range !== "6M") p.set("range", state.range); }
+  }
+  const qs = p.toString();
+  return location.pathname + (qs ? "?" + qs : "");
+}
+function writeURL(push) { history[push ? "pushState" : "replaceState"](null, "", urlFor(true)); }
+
+/* ---------- ticker carousel: moving content gets a pause button ---------- */
+const reducedMotion = { get matches() { return document.documentElement.dataset.motion === "reduced"; } };
+function setTape(playing) {  // with reduced motion the OS asked for no autoplay, so it starts stopped and Play opts in
+  $("tapeToggle").setAttribute("aria-pressed", String(!playing));
+  $("tapeToggle").setAttribute("aria-label", playing ? "Pause Ticker" : "Play Ticker");
+  $("tapeIcon").setAttribute("href", playing ? "#i-pause" : "#i-play");
+  $("tape").classList.toggle("paused", !playing);
+  $("tape").classList.toggle("force", playing && reducedMotion.matches);
+}
+$("tapeToggle").addEventListener("click", () => setTape($("tapeToggle").getAttribute("aria-pressed") === "true"));
+setTape(!reducedMotion.matches);
+function setMotion(mode, save) {  // follows the OS setting until the viewer chooses; the choice is remembered
+  document.documentElement.dataset.motion = mode;
+  for (const id of ["motionBtn1", "motionBtn2"]) {
+    $(id).setAttribute("aria-pressed", String(mode === "full"));
+    $(id).querySelector("span:not([aria-hidden])").textContent = `Animations: ${mode === "full" ? "On" : "Off"}`;
+  }
+  if (save) { try { localStorage.setItem("motion", mode); } catch (e) { /* not remembered */ } }
+  setTape(mode === "full");
+}
+for (const id of ["motionBtn1", "motionBtn2"]) $(id).addEventListener("click", () => setMotion(document.documentElement.dataset.motion === "full" ? "reduced" : "full", true));
+setMotion(document.documentElement.dataset.motion, false);
+
+/* ---------- sidebar ---------- */
+function setSide(mode, save) {
+  document.documentElement.dataset.side = mode;
+  const t = $("sideToggle");
+  t.setAttribute("aria-expanded", String(mode === "expanded"));
+  t.setAttribute("aria-label", mode === "expanded" ? "Collapse Sidebar" : "Expand Sidebar");
+  if (save) { try { localStorage.setItem("side", mode); } catch (e) { /* private mode: preference just isn't remembered */ } }
+}
+$("sideToggle").addEventListener("click", () => setSide(document.documentElement.dataset.side === "expanded" ? "collapsed" : "expanded", true));
+setSide(document.documentElement.dataset.side, false);
+
+/* ---------- ticker tape, stats, status bar ---------- */
+function renderChrome() {
+  const top = [...rows].filter(r => r.market_cap).sort((a, b) => b.market_cap - a.market_cap).slice(0, 14);
+  const stock = (r, label) => { const d = dayChg(r); return h("li", {}, h("a", { href: `?s=${encodeURIComponent(r.symbol)}`, "data-stock": r.symbol },
+    label && h("span", { class: "lab", text: label }), h("b", { translate: "no", text: r.symbol }), h("span", { class: "num", text: usd.format(r.price) }),
+    h("span", { class: "num " + (d >= 0 ? "up" : "down"), text: `${d >= 0 ? "▲" : "▼"} ${pct.format(d)}` }))); };
+  const items = () => [
+    ...top.map(r => stock(r)),
+    ...(macro || []).map(s => h("li", {}, h("span", {}, h("span", { class: "lab", text: s.label }), h("b", { class: "num", text: `${dec2.format(s.latest)}%` }),
+      h("span", { class: "num " + (s.change_20 >= 0 ? "up" : "down"), text: `${signed2.format(s.change_20)}${NB}pts` })))),
+    ...(rows.length ? [stock(rows[0], `Top predicted`), stock(rows[rows.length - 1], `Weakest predicted`)] : []),
+  ];
+  const copy = h("ul", { "aria-hidden": "true", inert: true }, ...items());  // second copy makes the loop seamless; hidden from assistive tech
+  $("track").replaceChildren(h("ul", {}, ...items()), copy);
+  $("track").style.setProperty("--dur", `${Math.max(80, copy.children.length * 5.2)}s`);
+  const when = dataInfo ? `Prices through ${dateMed.format(utc(dataInfo.newest_bar))}` : "";
+  $("asof").textContent = when; $("asof2").textContent = when;
+  const m = model && model.metrics;
+  $("chipDot").className = "dot" + (m && m.edge ? " ok" : "");
+  $("chipTxt").textContent = m ? (m.edge ? "Weak Signal" : "No Reliable Signal") : "Model Not Trained";
+}
+function renderStats() {
+  if (!rows.length) { $("stats").replaceChildren(); return; }
+  const adv = rows.filter(r => dayChg(r) > 0).length, dec = rows.filter(r => dayChg(r) < 0).length;
+  const total = rows.reduce((a, r) => a + (r.market_cap || 0), 0);
+  const best = rows[0], worst = rows[rows.length - 1];  // rows arrive ranked by predicted return
+  const link = r => h("a", { href: `?s=${encodeURIComponent(r.symbol)}`, "data-stock": r.symbol, translate: "no", text: r.symbol });
+  $("stats").replaceChildren(
+    tile("Total Market Cap", usdCompact.format(total), `${int.format(rows.length)} stocks`),
+    h("div", { class: "tile" }, h("p", { class: "k", text: "Advancing / Declining Today" }),
+      h("p", { class: "v" }, h("span", { class: "up", text: int.format(adv) }), " / ", h("span", { class: "down", text: int.format(dec) })),
+      h("div", { class: "breadth", role: "img", "aria-label": `${adv} advancing, ${dec} declining` }, h("i", { style: `width:${adv / ((adv + dec) || 1) * 100}%` }))),
+    h("div", { class: "tile" }, h("p", { class: "k", text: `Top Predicted (${horizon()}${NB}days)` }), h("p", { class: "v" }, link(best), " ", h("span", { class: "up", text: pct.format(best.pred_return) }))),
+    h("div", { class: "tile" }, h("p", { class: "k", text: `Weakest Predicted (${horizon()}${NB}days)` }), h("p", { class: "v" }, link(worst), " ", h("span", { class: pct.format(worst.pred_return).startsWith("-") ? "down" : "up", text: pct.format(worst.pred_return) }))));
+}
+
+/* ---------- markets: table / cards, sorted + lazily rendered ---------- */
+const COLS = [  // [label, sort key, class]
+  ["Symbol", "az", ""], ["Price", "price", ""], ["1D", "day", ""], ["40-Day Trend", null, "hide-sm"],
+  ["Mkt Cap", "cap", "hide-sm"], ["Risk (5D)", "risk", "hide-sm"], [`Pred. Price`, null, "hide-md"], [`Pred. ${NB}%`, "pred", ""], ["Rank", null, "hide-md"],
+];
+function renderHead() {
+  $("thead").replaceChildren(...COLS.map(([label, key, cls]) => {
+    const active = key === state.sort;
+    return h("th", { scope: "col", class: cls, "aria-sort": key ? (active ? (effDir() === "asc" ? "ascending" : "descending") : "none") : null },
+      key ? h("button", { class: "th", type: "button", "data-sort": key, text: label + (active ? (effDir() === "asc" ? " ▲" : " ▼") : "") })
+          : h("span", { class: "th", text: label }));
+  }));
+}
+const riskEl = r => r.risk ? h("span", {}, h("span", { class: "risk " + r.risk.toLowerCase(), text: r.risk }),
+  h("span", { class: "swing", title: "Typical swing over the next 5 trading days (one standard deviation)", text: `±${pct1.format(r.swing)}` })) : "–";
+function rowEl(r) {
+  const d = dayChg(r), up = r.pred_return >= 0, trend = r.spark[r.spark.length - 1] / r.spark[0] - 1;
+  return h("tr", { "data-sym": r.symbol },
+    h("td", {}, h("div", { class: "who" }, logoEl(r, 30),
+      h("div", { class: "t" }, h("p", { class: "sym", translate: "no" }, h("a", { href: `?s=${encodeURIComponent(r.symbol)}`, "data-stock": r.symbol, text: r.symbol })), h("p", { class: "nm", title: r.name, text: r.name })))),
+    h("td", { class: "num", text: usd.format(r.price) }),
+    h("td", { class: "num " + (d >= 0 ? "up" : "down"), text: pct.format(d) }),
+    h("td", { class: "hide-sm" }, spark(r.spark, `Last ${r.spark.length} trading days: ${trend >= 0 ? "up" : "down"} ${pct1.format(Math.abs(trend))}`, false, 96, 28)),
+    h("td", { class: "num hide-sm", text: r.market_cap ? usdCompact.format(r.market_cap) : "–" }),
+    h("td", { class: "hide-sm" }, riskEl(r)),
+    h("td", { class: "num muted hide-md", text: usd.format(r.pred_price) }),
+    h("td", {}, h("span", { class: "pill" + (up ? "" : " down") }, h("span", { class: "sr", text: `Predicted ${horizon()}-day change: ` }), h("span", { "aria-hidden": "true", text: up ? "▲ " : "▼ " }), pct.format(r.pred_return))),
+    h("td", { class: "num faint hide-md", text: `#${r.rank}` }));
+}
+function cardEl(r) {
+  const d = dayChg(r), up = r.pred_return >= 0, trend = r.spark[r.spark.length - 1] / r.spark[0] - 1;
+  return h("li", { class: "card" },
+    h("div", { class: "head" }, logoEl(r, 30),
+      h("div", { class: "t" }, h("h3", { class: "sym", translate: "no" }, h("a", { href: `?s=${encodeURIComponent(r.symbol)}`, "data-stock": r.symbol, text: r.symbol })), h("p", { class: "nm", title: r.name, text: r.name })),
+      h("p", { class: "faint num", style: "font-size:12px", text: `#${r.rank}` })),
+    spark(r.spark, `Last ${r.spark.length} trading days: ${trend >= 0 ? "up" : "down"} ${pct1.format(Math.abs(trend))}`),
+    h("div", { class: "foot" },
+      h("div", {}, h("p", { class: "price", text: usd.format(r.price) }), h("p", { class: "num " + (d >= 0 ? "up" : "down"), style: "font-size:12px", text: `${pct.format(d)} today` }), r.risk && h("p", { style: "margin-top:4px" }, riskEl(r))),
+      h("p", { class: "pill" + (up ? "" : " down") }, h("span", { class: "sr", text: `Predicted ${horizon()}-day change: ` }), h("span", { "aria-hidden": "true", text: up ? "▲ " : "▼ " }), pct.format(r.pred_return))));
+}
+function computeList() {
+  const term = state.q.trim().toLowerCase(), { val } = SORTS[state.sort], sign = effDir() === "asc" ? 1 : -1;
+  list = rows.filter(r => (!state.sector || r.sector === state.sector) && (!term || r.symbol.toLowerCase().includes(term) || r.name.toLowerCase().includes(term)));
+  list.sort((a, b) => {
+    const x = val(a), y = val(b);
+    if (x == null || y == null) return (x == null) - (y == null);  // unknown values stay at the bottom either way
+    return sign * (typeof x === "string" ? x.localeCompare(y) : x - y);
+  });
+}
+function renderList() {
+  computeList(); renderHead();
+  const cards = state.layout === "cards";
+  $("table").hidden = cards || !list.length; $("cards").hidden = !cards || !list.length;
+  $("lyTable").setAttribute("aria-pressed", String(!cards)); $("lyCards").setAttribute("aria-pressed", String(cards));
+  $("dirBtn").textContent = effDir() === "asc" ? "↑" : "↓";
+  $("count").textContent = `${int.format(list.length)} of ${int.format(rows.length)} stocks`;
+  const none = rows.length > 0 && list.length === 0;
+  $("empty").hidden = !none;
+  if (none) $("emptyMsg").textContent = state.q ? `No stocks match “${state.q}”. Try a different symbol or clear the filters.` : "No stocks in this sector.";
+  $("tbody").replaceChildren(); $("cards").replaceChildren(); shown = 0;
+  renderMore();
+}
+function renderMore() {  // 60 at a time: a 500-row table would otherwise cost 500 sparklines up front
+  const next = list.slice(shown, shown + CHUNK);
+  shown += next.length;
+  if (state.layout === "cards") $("cards").append(...next.map(cardEl)); else $("tbody").append(...next.map(rowEl));
+  io.unobserve($("more")); io.observe($("more"));  // re-observe so a still-visible sentinel fires again
+}
+const io = new IntersectionObserver(es => { if (es[0].isIntersecting && shown < list.length) renderMore(); }, { rootMargin: "700px" });
+
+function syncControls() {
+  $("q").value = state.q; $("sector").value = state.sector; $("sort").value = state.sort;
+}
+function fillSectors() {
+  $("sector").replaceChildren(h("option", { value: "", text: "All Sectors" }), ...[...new Set(rows.map(r => r.sector))].sort().map(x => h("option", { value: x, text: x })));
+}
+$("filters").addEventListener("submit", e => e.preventDefault());
+$("q").addEventListener("input", e => { state.q = e.target.value; writeURL(false); renderList(); });
+$("sector").addEventListener("change", e => { state.sector = e.target.value; writeURL(false); renderList(); });
+$("sort").addEventListener("change", e => { state.sort = e.target.value; state.dir = ""; writeURL(false); renderList(); });
+$("dirBtn").addEventListener("click", () => { state.dir = effDir() === "asc" ? "desc" : "asc"; if (state.dir === SORTS[state.sort].dir) state.dir = ""; writeURL(false); renderList(); });
+$("lyTable").addEventListener("click", () => { state.layout = "table"; writeURL(false); renderList(); });
+$("lyCards").addEventListener("click", () => { state.layout = "cards"; writeURL(false); renderList(); });
+$("clearBtn").addEventListener("click", () => { state.q = ""; state.sector = ""; writeURL(false); syncControls(); renderList(); $("q").focus(); });
+$("thead").addEventListener("click", e => {
+  const b = e.target.closest("button[data-sort]");
+  if (!b) return;
+  if (b.dataset.sort === state.sort) state.dir = effDir() === "asc" ? "desc" : "asc"; else { state.sort = b.dataset.sort; state.dir = ""; }
+  if (state.dir === SORTS[state.sort].dir) state.dir = "";
+  syncControls(); writeURL(false); renderList();
+  $("thead").querySelector(`button[data-sort="${state.sort}"]`).focus();  // header was rebuilt: keep keyboard position
+});
+
+/* ---------- macro + model views ---------- */
+function renderMacro() {
+  $("macroEmpty").hidden = !!(macro && macro.length);
+  $("macroTiles").replaceChildren(...(macro || []).map(s => {
+    const up = s.change_20 >= 0;
+    return h("li", { class: "tile wide" }, h("p", { class: "k", text: s.label }), h("p", { class: "v" }, `${dec2.format(s.latest)}%`),
+      h("p", { class: "hint num", text: `${signed2.format(s.change_20)}${NB}pts over 20${NB}days · ${dateMed.format(utc(s.as_of))}` }),
+      spark(s.spark, `${s.label}, last ${s.spark.length} readings, ${up ? "up" : "down"} ${dec2.format(Math.abs(s.change_20))} points over 20 days`, true, 240, 84),
+      h("p", { class: "about", text: MACRO_ABOUT[s.id] || "" }));
+  }));
+}
+function renderModel() {
+  const body = $("modelBody");
+  if (!model) { body.replaceChildren(h("p", { class: "muted", text: "No model yet. Select “Update Data & Retrain” in the sidebar to download prices (needs internet once) and train it. Afterwards everything runs offline." })); return; }
+  const m = model.metrics;
+  body.replaceChildren(
+    h("div", { class: "verdict" }, h("span", { class: "dot" + (m.edge ? " ok" : ""), "aria-hidden": "true" }),
+      h("div", {}, h("p", { class: "verdict-t", text: m.edge ? "Weak Ranking Signal" : "No Reliable Signal" }),
+        h("p", { class: "verdict-s", text: `Scored on ${int.format(m.test_rows)} predictions since ${dateMed.format(utc(m.test_from))} that the model never saw. Trained ${dateMed.format(utc(model.trained))}.` }))),
+    h("div", { class: "tiles", style: "margin-top:14px" },
+      tile("Direction Accuracy", pct1.format(m.hit), `Always guessing up: ${pct1.format(m.always_up_hit)}`),
+      tile("Rank Skill (IC)", dec3.format(m.ic), "Stock vs. stock. 0 means no skill"),
+      tile("Best Fifth vs. Worst Fifth", pct.format(m.top_minus_bottom), `Per week, t = ${dec2.format(m.t_stat)}. Needs above 2`),
+      tile("Top Fifth Beats the Median", pct1.format(m.beat_median), "Chance is 50%"),
+      tile("Weeks Tested", int.format(m.weeks), `${int.format(m.stocks)} stocks, no overlap`)),
+    h("p", { class: "verdict-s", style: "margin-top:12px", text: "The model has an edge only if its direction accuracy clearly beats always guessing up." }));
+}
+function renderRisk() {
+  const v = model && model.vol, body = $("riskBody");
+  if (!v) { body.replaceChildren(h("p", { class: "muted", text: "No risk forecast yet. Select “Update Data & Retrain” in the sidebar." })); return; }
+  body.replaceChildren(
+    h("div", { class: "verdict" }, h("span", { class: "dot" + (v.ok ? " ok" : ""), "aria-hidden": "true" }),
+      h("div", {}, h("p", { class: "verdict-t", text: v.ok ? "Real, Measurable Skill" : "No Clear Skill" }),
+        h("p", { class: "verdict-s", text: `Forecasts how large each stock’s moves will be over the next ${horizon()} days, scored on ${int.format(v.rows)} unseen predictions. Unlike returns, volatility can be forecast.` }))),
+    h("div", { class: "tiles", style: "margin-top:14px" },
+      tile("Variation Explained (R²)", pct1.format(v.r2), `“Same as lately” baseline: ${pct1.format(v.r2_baseline)}`),
+      tile("Correlation", dec3.format(v.corr), `Baseline: ${dec3.format(v.corr_baseline)}`),
+      tile("Calm-Rated Stocks Moved", pct1.format(v.calm), "Average daily move afterwards"),
+      tile("Wild-Rated Stocks Moved", pct1.format(v.wild), `${dec2.format(v.wild / v.calm)}× the calm ones`)),
+    h("p", { class: "verdict-s", style: "margin-top:12px", text: "Most of this comes from volatility persisting: wild stocks tend to stay wild. The model adds a measurable improvement on top, but a forecast of size is not a forecast of direction." }));
+}
+function renderDataQuality() {
+  const d = dataInfo; $("dataq").hidden = !d;
+  if (!d) return;
+  const names = Object.keys(d.issues);
+  $("dataqSummary").textContent = `Data Quality: ${int.format(d.stocks)} stocks, latest prices ${dateMed.format(utc(d.newest_bar))}, ${names.length} flagged`;
+  $("dataqList").replaceChildren(...(names.length ? names.map(n => h("li", {}, h("strong", { translate: "no", text: n }), ": " + d.issues[n].join("; "))) : [h("li", { text: "No problems found." })]));
+}
+
+/* ---------- stock detail + chart ---------- */
+let hist = null, current = null, hoverIdx = -1, cw = 0, chh = 0, histToken = 0;
+const FONT = getComputedStyle(document.documentElement).getPropertyValue("--font");
+const C = k => getComputedStyle(document.documentElement).getPropertyValue(k).trim();
+const COLORS = { up: C("--up"), down: C("--down"), line: C("--line"), muted: C("--faint"), cyan: C("--accent-text") };
+const rowItem = (k, v, cls) => h("div", {}, h("dt", { text: k }), h("dd", { class: cls || "", text: v }));
+
+function renderRanges() {
+  $("ranges").replaceChildren(...Object.keys(RANGES).map(k => h("button", { type: "button", "aria-pressed": String(k === state.range), text: k,
+    onclick: () => { state.range = k; writeURL(false); renderRanges(); loadHistory(); } })));
+}
+async function loadHistory() {
+  const token = ++histToken, sym = state.s;
+  $("readout").textContent = "Loading chart…";
+  try {
+    const data = await api(`/api/history/${encodeURIComponent(sym)}?n=${RANGES[state.range]}`);
+    if (token !== histToken) return;  // a newer request replaced this one
+    hist = data; hoverIdx = -1;
+    $("readout").textContent = "Hover or use the arrow keys on the chart for prices.";
+    $("chart").setAttribute("aria-label", `${sym} price chart for the last ${state.range}. Latest close ${usd.format(hist.c[hist.c.length - 1])}, predicted ${usd.format(current.pred_price)}.`);
+    $("tblBody").replaceChildren(...hist.t.map((_, i) => i).slice(-10).reverse().map(i => h("tr", {},
+      h("td", { text: dateMed.format(utc(hist.t[i])) }), ...[hist.o[i], hist.h[i], hist.l[i], hist.c[i]].map(v => h("td", { text: dec2.format(v) })), h("td", { text: int.format(hist.v[i]) }))));
+    draw();
+  } catch (e) {
+    if (token === histToken) { hist = null; $("readout").textContent = `Could not load prices: ${e.message}. Select “Update Data & Retrain”, then reopen this stock.`; }
+  }
+}
+function showDetail() {
+  current = rows.find(r => r.symbol === state.s);
+  const r = current, up = r.pred_return >= 0, d = dayChg(r), chg = r.price - r.spark[r.spark.length - 2];
+  $("dLogo").replaceChildren(logoEl(r, 48));
+  $("dTitle").textContent = r.symbol;
+  $("dSub").textContent = `${r.name} · ${r.sector}`;
+  $("dPrice").textContent = usd.format(r.price);
+  $("dDay").className = "num " + (d >= 0 ? "up" : "down");
+  $("dDay").textContent = `${d >= 0 ? "▲" : "▼"} ${signed2.format(chg)} (${pct.format(d)}) · ${dateMed.format(utc(r.as_of))}`;
+  $("predRows").replaceChildren(
+    rowItem(`Predicted in ${horizon()}${NB}Trading${NB}Days`, usd.format(r.pred_price), "big"),
+    rowItem("Expected Change", `${up ? "▲" : "▼"} ${pct.format(r.pred_return)}`, up ? "up" : "down"),
+    rowItem("Rank by Prediction", `${int.format(r.rank)} of ${int.format(rows.length)}`),
+    rowItem("Risk Forecast", r.risk || "–"),
+    rowItem(`Typical ${horizon()}-Day Swing`, r.swing ? `±${pct1.format(r.swing)}` : "–"));
+  $("statRows").replaceChildren(
+    rowItem("Market Cap", r.market_cap ? usdCompact.format(r.market_cap) : "–"), rowItem("Sector", r.sector),
+    rowItem("52-Week High", usd.format(r.hi52)), rowItem("52-Week Low", usd.format(r.lo52)));
+  const pos = Math.min(100, Math.max(0, (r.price - r.lo52) / ((r.hi52 - r.lo52) || 1) * 100));
+  $("range52").replaceChildren(h("div", { class: "range52", role: "img", "aria-label": `Price is ${Math.round(pos)} percent of the way from the 52-week low to the high` }, h("i", { style: `left:${pos}%` })),
+    h("div", { class: "range52-l" }, h("span", { text: usd.format(r.lo52) }), h("span", { text: usd.format(r.hi52) })));
+  renderRanges(); loadHistory();
+}
+
+const ro = new ResizeObserver(([e]) => { cw = Math.round(e.contentRect.width); chh = Math.round(e.contentRect.height); draw(); });
+ro.observe($("chart"));
+const sma = (a, n) => a.map((_, i) => i + 1 < n ? null : a.slice(i + 1 - n, i + 1).reduce((x, y) => x + y) / n);
+
+function draw() {
+  if (!hist || !current || !cw || $("viewDetail").hidden) return;
+  const cv = $("chart"), dpr = window.devicePixelRatio || 1;
+  cv.width = cw * dpr; cv.height = chh * dpr;
+  const g = cv.getContext("2d"); g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  g.font = `12px ${FONT}`; g.textBaseline = "middle";
+  const n = hist.c.length, L = 6, R = 66, T = 14, axisH = 24, volH = Math.round(chh * 0.16), pB = chh - axisH - volH - 6;
+  const sw = current.swing || 0, bandHi = current.pred_price * (1 + sw), bandLo = current.pred_price * (1 - sw);
+  const lo = Math.min(...hist.l, bandLo), hi = Math.max(...hist.h, bandHi), pad = (hi - lo) * 0.06 || 1;
+  const y = v => T + (pB - T) * (1 - (v - (lo - pad)) / (hi - lo + 2 * pad));
+  const pW = cw - L - R, step = pW / n, x = i => L + step * (i + 0.5), vmax = Math.max(...hist.v) || 1;
+  const rising = hist.c[n - 1] >= hist.c[0], tone = rising ? COLORS.up : COLORS.down;
+
+  g.strokeStyle = COLORS.line; g.fillStyle = COLORS.muted; g.textAlign = "left"; g.lineWidth = 1;
+  for (let k = 0; k <= 4; k++) {
+    const v = lo + (hi - lo) * k / 4, yy = Math.round(y(v)) + .5;
+    g.beginPath(); g.moveTo(L, yy); g.lineTo(cw - R, yy); g.stroke();
+    g.fillText(dec2.format(v), cw - R + 8, yy);
+  }
+  const fmtX = n > 130 ? monthShort : dayShort, ticks = 5;
+  g.textAlign = "center";
+  for (let k = 0; k < ticks; k++) {
+    const i = Math.round((n - 1) * k / (ticks - 1)), tx = Math.min(Math.max(x(i), 28), cw - R - 28);
+    g.fillText(fmtX.format(utc(hist.t[i])), tx, chh - 9);
+  }
+  if (step >= 4) {  // wide enough for candles
+    hist.c.forEach((c, i) => {
+      g.strokeStyle = g.fillStyle = c >= hist.o[i] ? COLORS.up : COLORS.down;
+      g.beginPath(); g.moveTo(x(i), y(hist.h[i])); g.lineTo(x(i), y(hist.l[i])); g.stroke();
+      g.fillRect(x(i) - step * 0.34, y(Math.max(c, hist.o[i])), step * 0.68, Math.max(1, Math.abs(y(c) - y(hist.o[i]))));
+    });
+  } else {
+    const grad = g.createLinearGradient(0, T, 0, pB);
+    grad.addColorStop(0, tone + "40"); grad.addColorStop(1, tone + "00");
+    g.beginPath(); hist.c.forEach((c, i) => (i ? g.lineTo(x(i), y(c)) : g.moveTo(x(i), y(c))));
+    g.strokeStyle = tone; g.lineWidth = 1.6; g.lineJoin = "round"; g.stroke();
+    g.lineTo(x(n - 1), pB); g.lineTo(x(0), pB); g.closePath(); g.fillStyle = grad; g.fill(); g.lineWidth = 1;
+  }
+  g.globalAlpha = 0.35;
+  hist.v.forEach((v, i) => {
+    g.fillStyle = hist.c[i] >= hist.o[i] ? COLORS.up : COLORS.down;
+    const vh = volH * v / vmax; g.fillRect(x(i) - Math.max(step * 0.34, .5), chh - axisH - vh, Math.max(step * 0.68, 1), vh);
+  });
+  g.globalAlpha = 1;
+  [[20, "#f4b000"], [50, "#929aa5"]].forEach(([w, col]) => {
+    g.strokeStyle = col; g.lineWidth = 1.2; g.beginPath(); let on = false;
+    sma(hist.c, w).forEach((v, i) => { if (v == null) return; on ? g.lineTo(x(i), y(v)) : g.moveTo(x(i), y(v)); on = true; });
+    g.stroke();
+  });
+  if (sw) {  // typical swing range around the prediction: the honest size of the uncertainty
+    g.fillStyle = "rgba(91, 140, 255, .08)"; g.fillRect(L, y(bandHi), cw - R - L, y(bandLo) - y(bandHi));
+    g.strokeStyle = "rgba(91, 140, 255, .5)"; g.lineWidth = 1; g.setLineDash([2, 4]);
+    for (const v of [bandHi, bandLo]) { g.beginPath(); g.moveTo(L, y(v)); g.lineTo(cw - R, y(v)); g.stroke(); }
+    g.setLineDash([]);
+  }
+  const ty = y(current.pred_price);
+  g.strokeStyle = COLORS.cyan; g.lineWidth = 1.5; g.setLineDash([6, 4]);
+  g.beginPath(); g.moveTo(L, ty); g.lineTo(cw - R, ty); g.stroke(); g.setLineDash([]);
+  g.fillStyle = COLORS.cyan; g.fillRect(cw - R + 2, ty - 10, R - 4, 20);
+  g.fillStyle = "#0b0e11"; g.textAlign = "center"; g.fillText(dec2.format(current.pred_price), cw - R / 2, ty);
+  g.lineWidth = 1;
+  if (hoverIdx >= 0) {
+    g.strokeStyle = COLORS.muted; g.setLineDash([3, 3]);
+    g.beginPath(); g.moveTo(x(hoverIdx), T); g.lineTo(x(hoverIdx), chh - axisH); g.stroke(); g.setLineDash([]);
+    g.fillStyle = tone; g.beginPath(); g.arc(x(hoverIdx), y(hist.c[hoverIdx]), 3.5, 0, Math.PI * 2); g.fill();
+  }
+}
+function setHover(i) {
+  hoverIdx = Math.max(0, Math.min(hist.c.length - 1, i));
+  const k = hoverIdx;
+  $("readout").textContent = `${dateMed.format(utc(hist.t[k]))}${NB}· O ${dec2.format(hist.o[k])} · H ${dec2.format(hist.h[k])} · L ${dec2.format(hist.l[k])} · C ${dec2.format(hist.c[k])} · Vol ${int.format(hist.v[k])}`;
+  draw();
+}
+$("chart").addEventListener("pointermove", e => {
+  if (!hist) return;
+  $("readout").setAttribute("aria-live", "off");
+  setHover(Math.floor((e.offsetX - 6) / ((cw - 72) / hist.c.length)));
+});
+$("chart").addEventListener("pointerleave", () => { hoverIdx = -1; draw(); });
+$("chart").addEventListener("keydown", e => {
+  if (!hist) return;
+  const big = e.shiftKey ? 10 : 1, last = hist.c.length - 1, cur = hoverIdx < 0 ? last : hoverIdx;
+  const next = { ArrowLeft: cur - big, ArrowRight: cur + big, Home: 0, End: last }[e.key];
+  if (next === undefined) return;
+  e.preventDefault();
+  $("readout").setAttribute("aria-live", "polite");  // announce only while navigating by keyboard
+  setHover(next);
+});
+
+/* ---------- routing ---------- */
+const TITLES = { home: "Home", markets: "Markets", macro: "Macro", model: "Model Report" };
+function setStage(stage) { document.documentElement.dataset.stage = stage; }
+function render(moveFocus) {
+  if (state.view === "home") {
+    setStage(Landing.isBooted() ? "landing" : "boot");
+    document.title = "AI Stock Predictor";
+    if (moveFocus) { window.scrollTo(0, 0); (Landing.isBooted() ? $("landTitle") : $("enterBtn")).focus({ preventScroll: true }); }
+    return;
+  }
+  setStage("app");
+  const detail = loaded && state.view === "markets" && state.s && rows.some(r => r.symbol === state.s);
+  const shownView = detail ? "detail" : state.view;
+  $("viewMarkets").hidden = shownView !== "markets"; $("viewDetail").hidden = shownView !== "detail";
+  $("viewMacro").hidden = shownView !== "macro"; $("viewModel").hidden = shownView !== "model";
+  document.querySelectorAll(".side nav a[data-view]").forEach(a => a.dataset.view === state.view ? a.setAttribute("aria-current", "page") : a.removeAttribute("aria-current"));
+  $("back").setAttribute("href", urlFor(false));
+  if (detail) { document.title = `${state.s} · AI Stock Predictor`; showDetail(); }
+  else {
+    document.title = `${TITLES[state.view]} · AI Stock Predictor`;
+    if (loaded && state.view === "markets") { syncControls(); renderList(); }
+  }
+  if (moveFocus) {
+    window.scrollTo(0, 0);
+    $({ detail: "dTitle", markets: "t-markets", macro: "t-macro", model: "t-model" }[shownView]).focus({ preventScroll: true });
+  }
+}
+function go(patch) { Object.assign(state, patch); writeURL(true); render(true); }
+document.addEventListener("click", e => {
+  if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+  const a = e.target.closest("a[data-stock], a[data-view], a[data-back]");
+  const tr = !a && !e.target.closest("button, a, input, select") && e.target.closest("tr[data-sym]");
+  if (!a && !tr) return;
+  e.preventDefault();
+  if (tr) return go({ view: "markets", s: tr.dataset.sym });
+  if (a.dataset.stock) return go({ view: "markets", s: a.dataset.stock });
+  if (a.hasAttribute("data-back")) return go({ s: "" });
+  go({ view: a.dataset.view, s: "" });
+});
+window.addEventListener("popstate", () => { readURL(); render(true); });
+
+/* ---------- loading + update job ---------- */
+function showAlert(msg, retry) {
+  const box = $("alert"); box.hidden = !msg;
+  box.replaceChildren(...(msg ? [h("span", { text: msg }), retry && h("button", { class: "btn", type: "button", text: "Try Again", onclick: loadAll })] : []));
+}
+async function loadAll() {
+  showAlert("");
+  try {
+    Landing.progress(0.06, "Connecting to the local server…");
+    const st = await api("/api/status");
+    Landing.progress(0.3, "Checking the model and price data…");
+    const p = await api("/api/predictions");
+    Landing.progress(0.7, `Ranking ${int.format(p.rows.length)} stocks…`);
+    const m = await api("/api/macro").catch(() => ({ series: null }));
+    Landing.progress(0.85, "Loading macro readings…");
+    model = st.model; dataInfo = st.data; macro = m.series; rows = p.rows; loaded = true;
+    if (p.error) showAlert(p.error);
+    $("lead").textContent = rows.length ? `S&P${NB}500 stocks, largest first. Predictions look ${horizon()} trading days ahead.` : "No predictions yet.";
+    renderChrome(); renderStats(); renderMacro(); renderModel(); renderRisk(); renderDataQuality(); fillSectors();
+    Landing.update();
+    Landing.progress(0.97, "Preparing the dashboard…");
+    render(false);
+    watchJob(st.job);
+    Landing.progress(1, "Ready.");
+  } catch (e) {
+    const msg = `Can’t reach the local server (${e.message}). Start it with “python server.py”, then try again.`;
+    showAlert(msg, true);
+    Landing.bootError(msg, loadAll);
+  }
+}
+function setBusy(on) {
+  const b = $("updateBtn");
+  b.disabled = on; b.setAttribute("aria-busy", String(on));
+  $("updSpin").hidden = !on; $("updIcon").style.display = on ? "none" : "";
+  $("updLbl").textContent = on ? "Updating…" : "Update Data & Retrain";
+}
+function watchJob(job) {
+  setBusy(job.running);
+  $("jobMsg").textContent = job.error ? `Update failed: ${job.error}. Check your connection, then try again.` : (job.log.at(-1) || "");
+  if (job.running && !poll) poll = setInterval(async () => {
+    try {
+      const s = await api("/api/status");
+      if (!s.job.running) { clearInterval(poll); poll = null; await loadAll(); } else watchJob(s.job);
+    } catch (e) { clearInterval(poll); poll = null; setBusy(false); $("jobMsg").textContent = "Lost connection to the server. Restart it, then try again."; }
+  }, 1500);
+}
+$("updateBtn").addEventListener("click", async () => {
+  setBusy(true);
+  try { await api("/api/update", { method: "POST" }); watchJob({ running: true, log: ["Starting…"] }); }
+  catch (e) { setBusy(false); $("jobMsg").textContent = `${e.message}. Try again in a moment.`; }
+});
+
+readURL();
+$("tbody").replaceChildren(...Array.from({ length: 14 }, () => h("tr", { "aria-hidden": "true" }, h("td", { colspan: COLS.length }, h("div", { class: "skel" })))));
+renderHead();
+Landing.update();
+loadAll();
+</script>
+</body>
+</html>

@@ -1,0 +1,11 @@
+# pip install -r requirements.txt
+# scikit-learn is pinned: the saved model only loads on the version that trained it.
+pandas==3.0.6
+numpy==2.4.6
+scikit-learn==1.7.1
+joblib==1.5.1
+yfinance==0.2.65
+requests==2.34.2
+lxml==6.0.1
+fastapi==0.143.3
+uvicorn==0.54.0
