@@ -329,7 +329,7 @@ function spark(vals, label, neutral = false, w = 120, ht = 36) {
 }
 async function api(path, opts) {
   const r = await fetch(path, opts);
-  if (!r.ok) throw new Error((await r.json().catch(() => ({}))).detail || r.statusText);
+  if (!r.ok) throw new Error((await r.json().catch(() => ({}))).detail || r.statusText || `HTTP ${r.status}`);
   return r.json();
 }
 const horizon = () => (model ? model.horizon : 5);

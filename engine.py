@@ -1,5 +1,6 @@
 """Data + model layer. Free and local: prices come from yfinance once, then live in data/*.csv."""
 import json
+import os
 import time
 import warnings
 from urllib.parse import urlparse
@@ -18,6 +19,7 @@ from sklearn.linear_model import Ridge
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 
+HOSTED = bool(os.environ.get("PORT")) and os.environ.get("ALLOW_UPDATE") != "1"  # public host: serve the committed snapshot as is
 BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR / "data"
 MODEL_PATH = BASE_DIR / "model" / "pooled_model.joblib"
@@ -491,7 +493,7 @@ def predict_all(tickers):
         return _pred_cache['out']
     if PRED_PATH.exists():
         saved = json.loads(PRED_PATH.read_text())
-        if saved['key'] == key:
+        if saved['key'] == key or HOSTED:  # a git checkout changes every file time, so the key never matches there
             _pred_cache.update(key=key, out=(saved['rows'], None))
             return saved['rows'], None
     names = dict(tickers)
