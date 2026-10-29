@@ -21,13 +21,22 @@ pip install -r requirements.txt
 python server.py
 ```
 
-The browser opens at <http://127.0.0.1:8000>. On first run choose **Update Data & Retrain** in the sidebar. It downloads about ten years of prices, share counts, logos and FRED series, trains both models and saves them under `data/` and `model/` (both git-ignored). The first update takes a few minutes; later starts take a few seconds.
+The browser opens at <http://127.0.0.1:8000>. On first run choose **Update Data & Retrain** in the sidebar. It downloads about ten years of prices, share counts, logos and FRED series, trains both models and saves them under `data/` and `model/`. The first update takes a few minutes; later starts take a few seconds.
 
 Run the sanity tests (feature columns, RSI bounds, no look-ahead):
 
 ```bash
 python test_model.py
 ```
+
+## Deploy on Render
+
+The repo includes a `render.yaml` blueprint, and the saved prices and trained model (`data/`, `model/`) are committed, so a deployed copy works immediately.
+
+1. In Render, choose **New → Blueprint** and select this repository. Render reads `render.yaml` (free plan, Python 3.11.9, `python server.py`).
+2. Deploy. When Render sets `PORT`, the server listens publicly and runs **read-only**: the Update button is hidden and `POST /api/update` returns 403, so visitors cannot start downloads or training.
+
+To refresh the data, run the app locally, use **Update Data & Retrain**, then commit the changed `data/` and `model/` files and push. Render redeploys automatically. Free instances sleep after 15 minutes idle and take about 30 seconds to wake. To allow updating on a host anyway, set `ALLOW_UPDATE=1`, but its disk is wiped on each deploy.
 
 ## How it works
 
@@ -54,7 +63,8 @@ engine.py        data download, features, models, scoring, predictions
 test_model.py    feature and look-ahead checks
 static/          web interface (index.html, app.css, landing.css/js, fonts, tech logos)
 docs/            presentation (.pptx) and brochure (.pdf)
-data/, model/    generated at runtime, not committed
+render.yaml      Render blueprint
+data/, model/    saved prices and trained model (the snapshot Render serves)
 ```
 
 ## Technology

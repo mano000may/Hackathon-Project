@@ -789,6 +789,7 @@ async function loadAll() {
     Landing.progress(0.97, "Preparing the dashboard…");
     render(false);
     watchJob(st.job);
+    if (st.can_update === false) { $("updateBtn").style.display = "none"; $("jobMsg").textContent = "Hosted demo: prices are a saved snapshot."; }
     Landing.progress(1, "Ready.");
   } catch (e) {
     const msg = `Can’t reach the local server (${e.message}). Start it with “python server.py”, then try again.`;

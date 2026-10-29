@@ -1,4 +1,6 @@
-"""Local web backend. Run: python server.py  ->  http://127.0.0.1:8000 (listens on this machine only)."""
+"""Web backend. Run: python server.py  ->  http://127.0.0.1:8000 (this machine only).
+On a host that sets PORT (Render) it listens publicly and is read-only: no Update button, no downloads."""
+import os
 import threading
 import webbrowser
 from pathlib import Path
@@ -18,6 +20,8 @@ TICKERS = engine.get_tickers()
 SYMBOLS = {s for s, _ in TICKERS}
 job = {"running": False, "log": [], "error": None}
 job_lock = threading.Lock()
+PORT = os.environ.get("PORT")
+CAN_UPDATE = not PORT or os.environ.get("ALLOW_UPDATE") == "1"  # public hosts serve the saved snapshot; anyone could otherwise start a heavy job
 
 
 def _log(msg):
@@ -60,11 +64,13 @@ def index():
 
 @app.get("/api/status")
 def status():
-    return {"job": job, "model": engine.model_info(), "data": engine.quality_summary()}
+    return {"job": job, "model": engine.model_info(), "data": engine.quality_summary(), "can_update": CAN_UPDATE}
 
 
 @app.post("/api/update")
 def update():
+    if not CAN_UPDATE:
+        raise HTTPException(403, "Updates are disabled on this host")
     with job_lock:
         if job["running"]:
             raise HTTPException(409, "Update already running")
@@ -107,5 +113,8 @@ def history(symbol: str, n: int = Query(150, ge=20, le=2600)):
 
 if __name__ == "__main__":
     threading.Thread(target=engine.predict_all, args=(TICKERS,), daemon=True).start()  # warm the cache, first call takes ~10s
-    threading.Timer(1.0, lambda: webbrowser.open("http://127.0.0.1:8000")).start()
-    uvicorn.run(app, host="127.0.0.1", port=8000)
+    if PORT:
+        uvicorn.run(app, host="0.0.0.0", port=int(PORT))
+    else:
+        threading.Timer(1.0, lambda: webbrowser.open("http://127.0.0.1:8000")).start()
+        uvicorn.run(app, host="127.0.0.1", port=8000)
