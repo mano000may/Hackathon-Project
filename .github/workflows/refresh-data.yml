@@ -1,0 +1,30 @@
+name: Refresh data
+
+on:
+  schedule:
+    - cron: "0 23 * * 1-5"  # weekdays 23:00 UTC, after the US market has closed
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - run: python refresh.py
+      - name: Commit new data
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data model
+          git diff --cached --quiet && echo "No changes" && exit 0
+          git commit -m "Refresh data $(date -u +%F)"
+          git push

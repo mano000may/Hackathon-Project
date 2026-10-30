@@ -43,6 +43,8 @@ Run the sanity tests (feature columns, RSI bounds, no look-ahead):
 python test_model.py
 ```
 
+A GitHub Actions workflow (`.github/workflows/refresh-data.yml`) refreshes the data and retrains the models every weekday evening and commits the result, so the saved snapshot stays current. You can also run it from the **Actions** tab, or run `python refresh.py` yourself.
+
 When the `PORT` environment variable is set (as on most hosting services), the server listens publicly in read-only mode: the Update button is hidden and `POST /api/update` returns 403. Set `ALLOW_UPDATE=1` to turn updating back on.
 
 ## How it works
