@@ -1,27 +1,41 @@
+<div align="center">
+
 # AI Stock Predictor
 
-A free, local stock dashboard for the S&P 500. It downloads daily prices, ranks every stock with a simple model, forecasts how risky each one is, and grades its own predictions against a plain baseline. It runs entirely on your computer: no paid APIs, no account, no API key, and the server only listens on `127.0.0.1`.
+**Rank the whole S&P 500. Know how far to trust it.**
+
+A free, open-source stock dashboard that scores every S&P 500 company, forecasts how risky each one is, and then grades its own predictions against a simple baseline, so you see the signal and the honesty together.
+
+<a href="https://ai-stock-predictor-nuj6.onrender.com/"><img src="https://img.shields.io/badge/%E2%96%B6%20Open%20Live%20Demo-0052FF?style=for-the-badge&labelColor=0052FF" alt="Open Live Demo" height="44"></a>
+
+<sub>The demo runs on a free server and sleeps when idle, so the first load can take up to a minute.</sub>
+
+<br>
+
+<img src="docs/dashboard.png" alt="The Markets page: S&P 500 stocks with logos, trend sparklines, risk ratings and predicted prices" width="900">
+
+</div>
 
 > **Experimental. Not financial advice.** The return forecast has no reliable edge over simply guessing "up", and the app says so on screen. The risk forecast does beat its baseline. See [Results](#results).
 
 ## Features
 
-- **Markets** – the S&P 500 watchlist sorted by market cap, with company logos, sparklines, a 5-day return estimate and a Calm / Normal / Wild risk rating. Filter by sector, search, sort, or switch between table and card layouts.
-- **Stock page** – candlestick / line chart with the predicted price and a typical-swing range, 52-week range and key figures.
-- **Macro** – interest rates, yields and spreads from FRED.
-- **Model report** – hit rate, weekly top-versus-bottom spread, rank correlation and risk-forecast accuracy, all measured on two years of data the model never saw.
-- **Landing page** with a real-progress loader and a short tour of how it works.
+- **Markets**: the full watchlist sorted by market cap, with company logos, 40-day sparklines, a 5-day return estimate and a Calm / Normal / Wild risk rating. Search, filter by sector, sort, and switch between table and card layouts.
+- **Stock page**: candlestick or line chart with the predicted price, a typical-swing range, moving averages, 52-week range and key figures.
+- **Macro**: interest rates, yields and spreads from FRED.
+- **Model report**: hit rate, weekly top-versus-bottom spread, rank correlation and risk-forecast accuracy, all measured on two years of data the model never saw.
+- **Free and local**: no paid APIs, no account, no API key. Run on your own machine, the server listens on `127.0.0.1` only.
 
-## Run it
+## Run it yourself
 
-Requires Python 3.11+.
+Requires Python 3.11 or newer.
 
 ```bash
 pip install -r requirements.txt
 python server.py
 ```
 
-The browser opens at <http://127.0.0.1:8000>. On first run choose **Update Data & Retrain** in the sidebar. It downloads about ten years of prices, share counts, logos and FRED series, trains both models and saves them under `data/` and `model/`. The first update takes a few minutes; later starts take a few seconds.
+The browser opens at <http://127.0.0.1:8000>. The repository includes a saved snapshot of prices and a trained model, so it works immediately. To pull fresh data, choose **Update Data & Retrain** in the sidebar. This downloads about ten years of prices, share counts, logos and FRED series, then retrains both models. The first update takes a few minutes.
 
 Run the sanity tests (feature columns, RSI bounds, no look-ahead):
 
@@ -29,14 +43,7 @@ Run the sanity tests (feature columns, RSI bounds, no look-ahead):
 python test_model.py
 ```
 
-## Deploy on Render
-
-The repo includes a `render.yaml` blueprint, and the saved prices and trained model (`data/`, `model/`) are committed, so a deployed copy works immediately.
-
-1. In Render, choose **New → Blueprint** and select this repository. Render reads `render.yaml` (free plan, Python 3.11.9, `python server.py`).
-2. Deploy. When Render sets `PORT`, the server listens publicly and runs **read-only**: the Update button is hidden and `POST /api/update` returns 403, so visitors cannot start downloads or training.
-
-To refresh the data, run the app locally, use **Update Data & Retrain**, then commit the changed `data/` and `model/` files and push. Render redeploys automatically. Free instances sleep after 15 minutes idle and take about 30 seconds to wake. To allow updating on a host anyway, set `ALLOW_UPDATE=1`, but its disk is wiped on each deploy.
+When the `PORT` environment variable is set (as on most hosting services), the server listens publicly in read-only mode: the Update button is hidden and `POST /api/update` returns 403. Set `ALLOW_UPDATE=1` to turn updating back on.
 
 ## How it works
 
@@ -46,14 +53,18 @@ To refresh the data, run the app locally, use **Update Data & Retrain**, then co
 | Features | 20 numbers per stock per day: momentum, trend, volatility, strength versus peers, and the rate backdrop. |
 | Return model | One pooled Ridge regression for all stocks, predicting the 5-day return. |
 | Risk model | A HAR-style Ridge regression on log volatility, predicting next-week realized volatility. |
-| Scoring | Time-ordered two-year holdout, weekly non-overlapping top-fifth minus bottom-fifth spread with a t-statistic. A model only counts as having an edge if the spread is positive and t > 2. |
+| Scoring | Time-ordered two-year holdout. Each week the top fifth of stocks is compared with the bottom fifth, using non-overlapping weeks and a t-statistic. A model only counts as having an edge if the spread is positive and t > 2. |
 
 ## Results
 
-Measured on the held-out period of the model that ships with a fresh training run (your numbers will vary with the data you download):
+Measured on two held-out years for the model snapshot included in this repository (your numbers will vary with the data you download):
 
-- **Return forecast:** hit rate about the same as always guessing up, weekly spread not statistically different from zero. Reported as "No Reliable Signal".
-- **Risk forecast:** explains more next-week volatility than the "same as lately" baseline, and the Calm / Normal / Wild groups separate clearly in realized daily moves.
+| | Model | Baseline |
+| --- | --- | --- |
+| **Return forecast**: hit rate | 52.4% | 52.3% (always guess up) |
+| **Risk forecast**: share of next-week volatility explained | 23.2% | 18.5% ("same as lately") |
+
+The return forecast is reported as **No Reliable Signal** (weekly spread t-statistic about 0). The risk forecast separates stocks clearly: the Calm, Normal and Wild groups moved 1.3%, 1.7% and 2.6% a day on average.
 
 ## Project layout
 
@@ -61,15 +72,14 @@ Measured on the held-out period of the model that ships with a fresh training ru
 server.py        FastAPI app and update job (run this)
 engine.py        data download, features, models, scoring, predictions
 test_model.py    feature and look-ahead checks
-static/          web interface (index.html, app.css, landing.css/js, fonts, tech logos)
-docs/            presentation (.pptx) and brochure (.pdf)
-render.yaml      Render blueprint
-data/, model/    saved prices and trained model (the snapshot Render serves)
+static/          web interface (HTML, CSS, JavaScript, fonts, tech logos)
+data/, model/    saved prices and trained model (the snapshot)
+docs/            screenshot, presentation (.pptx) and brochure (.pdf)
 ```
 
 ## Technology
 
-Python, FastAPI, Uvicorn, pandas, NumPy, scikit-learn, joblib, yfinance, requests, lxml, FRED. The front end is plain JavaScript with canvas and SVG charts, using Inter and JetBrains Mono fonts bundled locally. Logos in `static/tech/` come from [Simple Icons](https://simpleicons.org) (CC0) plus a few drawn for this project.
+Python, FastAPI, Uvicorn, pandas, NumPy, scikit-learn, joblib, yfinance, requests, lxml and FRED. The front end is plain JavaScript with canvas and SVG charts and Inter and JetBrains Mono fonts bundled locally. Logos in `static/tech/` come from [Simple Icons](https://simpleicons.org) (CC0) plus a few drawn for this project.
 
 ## Data and attribution
 
@@ -77,4 +87,4 @@ Prices are daily closes from Yahoo Finance, macro data is from FRED (St. Louis F
 
 ## License
 
-No license file yet. Add one (for example MIT) before publishing if you want others to be able to reuse the code.
+[MIT](LICENSE) © 2026 Manomay Milind Kini
