@@ -1,8 +1,10 @@
 {
- "generated": "2026-11-04",
- "newest_bar": "2026-11-03",
+ "generated": "2026-11-05",
+ "newest_bar": "2026-11-04",
  "stocks": 503,
- "download_failed": [],
+ "download_failed": [
+  "BRK-B"
+ ],
  "issues": {
   "APA": [
    "1 one-day moves over 40%"
