@@ -1,10 +1,8 @@
 {
- "generated": "2026-11-07",
- "newest_bar": "2026-11-06",
+ "generated": "2026-11-10",
+ "newest_bar": "2026-11-09",
  "stocks": 503,
- "download_failed": [
-  "AAPL"
- ],
+ "download_failed": [],
  "issues": {
   "APA": [
    "1 one-day moves over 40%"
@@ -62,6 +60,9 @@
   ],
   "TRGP": [
    "1 one-day moves over 40%"
+  ],
+  "KVUE": [
+   "stale since 2026-10-30, excluded"
   ]
  }
 }
