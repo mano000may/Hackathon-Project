@@ -1,8 +1,10 @@
 {
- "generated": "2026-11-13",
- "newest_bar": "2026-11-12",
+ "generated": "2026-11-14",
+ "newest_bar": "2026-11-13",
  "stocks": 503,
- "download_failed": [],
+ "download_failed": [
+  "CCL"
+ ],
  "issues": {
   "APA": [
    "1 one-day moves over 40%"
